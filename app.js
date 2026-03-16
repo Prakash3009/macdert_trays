@@ -11,9 +11,10 @@ let S = {
 const $ = id => document.getElementById(id);
 const qt = s => document.querySelectorAll(s);
 const TOTAL = 750;
+let topicFilter = null;
 
 function load() {
-  try { const d = localStorage.getItem(KEY); if (d) S = { ...S, ...JSON.parse(d) }; } catch (e) {}
+  try { const d = localStorage.getItem(KEY); if (d) S = { ...S, ...JSON.parse(d) }; } catch (e) { }
   checkFreezeReset();
   updateTopStats();
   buildSidebar();
@@ -102,6 +103,20 @@ function switchPage(pid, btn) {
   if (pid === 'p-bdg') renderBadges();
 }
 
+function navToTopic(tid) {
+  topicFilter = tid;
+  switchPage('p-sheet', $('n-sheet'));
+  renderSheet();
+  setTimeout(() => {
+    const el = $('tw-' + tid);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const hdr = el.querySelector('.thdr');
+      if (hdr && !hdr.classList.contains('op')) toggleAcc(hdr);
+    }
+  }, 200);
+}
+
 function updateTopStats() {
   const rn = getRank(S.xp);
   const nx = RANKS[RANKS.indexOf(rn) + 1];
@@ -126,7 +141,7 @@ function buildSidebar() {
   TOPICS.forEach(t => {
     const tot = t.problems.length;
     const sol = t.problems.filter(p => S.solved[p.id]).length;
-    html += '<div class="nav-item" data-tid="' + t.id + '">' +
+    html += `<div class="nav-item" data-tid="${t.id}" onclick="navToTopic('${t.id}')">` +
       '<span class="nav-icon">' + t.icon + '</span>' +
       '<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.name + '</span>' +
       '<span class="nav-badge" id="nsb-' + t.id + '">' + sol + '/' + tot + '</span></div>';
@@ -197,8 +212,10 @@ function rowHTML(p) {
 // ══════════════════════════════════════════
 function renderSheet() {
   const q = $('searchInp').value.trim();
+  if (q) topicFilter = null;
   let vis = 0, html = '';
   TOPICS.forEach(t => {
+    if (topicFilter && t.id !== topicFilter) return;
     const pFil = t.problems.filter(p => matchesFilter(p, q));
     if (!pFil.length) return;
     vis += pFil.length;
@@ -206,17 +223,19 @@ function renderSheet() {
     const sol = t.problems.filter(p => S.solved[p.id]).length;
     const pct = tot ? Math.round((sol / tot) * 100) : 0;
     const circ = 2 * Math.PI * 10, dash = (circ * pct / 100).toFixed(1);
+    const isOp = !!topicFilter;
 
     html += '<div class="tw" id="tw-' + t.id + '">' +
-      '<div class="thdr op" onclick="toggleAcc(this)">' +
+      '<div class="thdr ' + (isOp ? 'op' : '') + '" onclick="toggleAcc(this)">' +
       '<div style="width:4px;height:24px;border-radius:4px;background:' + t.color + '"></div>' +
       '<span class="ticon">' + t.icon + '</span>' +
       '<span class="tnm">' + t.name + '</span>' +
       '<span class="text-mono" style="font-size:11px;color:var(--text-secondary)">' + sol + '/' + tot + ' (' + pct + '%)</span>' +
-      '<svg width="24" height="24" viewBox="0 0 24 24" style="margin-left:10px"><circle cx="12" cy="12" r="10" fill="none" stroke="var(--border-hover)" stroke-width="3"/>' +
+      '<svg width="24" height="24" viewBox="0 0 24 24" style="margin-left:10px"><circle cx="12" cy="12" r="10" fill="none" stroke="var(--border-hover) " stroke-width="3"/>' +
       '<circle cx="12" cy="12" r="10" fill="none" stroke="' + t.color + '" stroke-width="3" stroke-dasharray="' + dash + ' ' + circ.toFixed(1) + '" stroke-dashoffset="' + (circ * 0.25).toFixed(1) + '" stroke-linecap="round" transform="rotate(-90 12 12)"/></svg>' +
+      '<span class="tarrow">▼</span>' +
       '</div>' +
-      '<div class="tbody op">' + pFil.map(rowHTML).join('') + '</div></div>';
+      '<div class="tbody ' + (isOp ? 'op' : '') + '">' + pFil.map(rowHTML).join('') + '</div></div>';
   });
   $('sheetBody').innerHTML = html;
   $('sheetSub').textContent = 'Showing: ' + vis + ' problems';
@@ -391,21 +410,16 @@ qt('.filter-btn[id^="fb-"]').forEach(b => {
     qt('.filter-btn[id^="fb-"]').forEach(x => x.classList.remove('on'));
     b.classList.add('on');
     currentFilter = b.id.replace('fb-', '');
+    topicFilter = null;
     renderSheet();
   };
 });
 $('searchInp').addEventListener('input', renderSheet);
 
 qt('.nav-item[id^="n-"]').forEach(n => {
-  n.onclick = () => switchPage('p-' + n.id.replace('n-', ''), n);
-});
-qt('.nav-item[data-tid]').forEach(n => {
   n.onclick = () => {
-    switchPage('p-sheet', $('n-sheet'));
-    setTimeout(() => {
-      const el = document.getElementById('tw-' + n.dataset.tid);
-      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    }, 100);
+    if (n.id === 'n-sheet') topicFilter = null;
+    switchPage('p-' + n.id.replace('n-', ''), n);
   };
 });
 
@@ -473,7 +487,7 @@ function renderDash() {
     const t_tot = t.problems.length, t_sol = t.problems.filter(p => S.solved[p.id]).length;
     const pct = t_tot ? t_sol / t_tot : 0;
     const r = 16, c = 2 * Math.PI * r, dash = (c * pct).toFixed(1);
-    return '<div class="r-card"><svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="' + r + '" fill="none" stroke="var(--border)" stroke-width="4"/>' +
+    return `<div class="r-card" onclick="navToTopic('${t.id}')"><svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="` + r + '" fill="none" stroke="var(--border)" stroke-width="4"/>' +
       '<circle cx="20" cy="20" r="' + r + '" fill="none" stroke="' + (t.color || 'var(--neon)') + '" stroke-width="4" stroke-dasharray="' + dash + ' ' + c.toFixed(1) + '" stroke-dashoffset="' + (c * 0.25).toFixed(1) + '" stroke-linecap="round" transform="rotate(-90 20 20)"/>' +
       '<text x="20" y="23" text-anchor="middle" fill="' + (t.color || 'var(--neon)') + '" font-size="9" font-family="Orbitron,monospace">' + Math.round(pct * 100) + '%</text></svg>' +
       '<div><div class="r-nm">' + t.icon + ' ' + t.name + '</div><div class="text-mono" style="font-size:10px;color:var(--text-secondary)">' + t_sol + '/' + t_tot + '</div></div></div>';

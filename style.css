@@ -163,6 +163,8 @@ body::after { content: ''; position: fixed; inset: 0; background: var(--scanline
 .tnm { flex: 1; font-weight: 600; font-size: 14px; }
 .tbody { display: none; }
 .tbody.op { display: block; }
+.tarrow { font-size: 10px; color: var(--text-muted); margin-left: 10px; transition: transform 0.3s ease; }
+.thdr.op .tarrow { transform: rotate(180deg); color: var(--neon); }
 .shdr { background: #030303; padding: 8px 20px; font-size: 10px; color: var(--text-secondary); letter-spacing: 1px; border-bottom: 1px solid var(--border); text-transform: uppercase; }
 .prow { display: grid; grid-template-columns: 24px 1fr auto auto auto auto auto 30px 30px 30px; align-items: center; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--border); transition: all .15s; }
 .prow:last-child { border-bottom: none; }
